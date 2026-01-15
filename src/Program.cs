@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows.Forms;
 using PDFsManager.Core;
 using PDFsManager.Models;
@@ -19,8 +20,18 @@ namespace PDFsManager
         [STAThread]
         static void Main(string[] args)
         {
-            // Check if launched at startup
-            bool isAutoStart = args.Length > 0 && args[0] == StartupHelper.StartupArgument;
+            // Single instance check
+            bool createdNew;
+            using (Mutex mutex = new Mutex(true, "PDFsManager_SingleInstance_Mutex", out createdNew))
+            {
+                if (!createdNew)
+                {
+                    MessageBox.Show("PDFs Manager is already running.", "PDFs Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Check if launched at startup
+                bool isAutoStart = args.Length > 0 && args[0] == StartupHelper.StartupArgument;
 
             // Initialize logger
             Logger logger = new Logger();
@@ -71,12 +82,9 @@ namespace PDFsManager
                 Application.Run(mainForm);
             }
 
-            // Cleanup on exit
-            logger.Write(Constants.LOG_ACTION_STOP, "PDFsManager stopped.");
-            Console.WriteLine($"Log file: {logger.LogFilePath}");
-            Console.WriteLine($"Config file: {configManager.ConfigFilePath}");
-            Console.WriteLine("\nPress any key to exit...");
-            Console.ReadKey();
+                logger.Write(Constants.LOG_ACTION_STOP, "PDFsManager terminated.");
+                GC.KeepAlive(mutex);
+            }
         }
     }
 }

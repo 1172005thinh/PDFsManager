@@ -366,10 +366,11 @@ dotnet run
 - ✅ Real-time monitoring with FileSystemWatcher
 - ✅ Configuration persistence
 - ✅ Comprehensive logging
+- ✅ Windows auto-startup functionality
 
 ### Version 1.1 (Planned)
 
-- [ ] Windows auto-startup functionality (StartupHelper)
+- [ ] Clean GUI improvements
 
 ## License
 

@@ -533,7 +533,7 @@ namespace PDFsManager.UI
         {
             _notifyIcon = new NotifyIcon();
             
-            // Set tray icon
+            // Set tray icon - try to load from file, fallback to application icon
             try
             {
                 string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "icon", "app256.ico");
@@ -541,11 +541,23 @@ namespace PDFsManager.UI
                 {
                     _notifyIcon.Icon = new Icon(iconPath);
                 }
+                else if (this.Icon != null)
+                {
+                    _notifyIcon.Icon = this.Icon;
+                }
+                else
+                {
+                    _notifyIcon.Icon = SystemIcons.Application;
+                }
             }
-            catch { /* Use default icon */ }
+            catch
+            {
+                // Fallback to default system icon
+                _notifyIcon.Icon = SystemIcons.Application;
+            }
 
             _notifyIcon.Text = "PDFs Manager";
-            _notifyIcon.Visible = false;
+            _notifyIcon.Visible = true;  // Always visible for system tray operation
 
             // Double-click to restore window
             _notifyIcon.DoubleClick += (s, e) =>
