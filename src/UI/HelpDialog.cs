@@ -51,10 +51,21 @@ namespace PDFsManager.UI
                                ThemeHelper.GetInt("Fonts.FontSizeNormal", ThemeHelper.Fallback.FontSizeNormal))
             };
 
-            // Load help content
+            // Load and format help content (convert markdown to plain text)
             string helpContent = LocalizationHelper.Get("HelpDialog.HelpContent", GetFallbackHelpContent());
-            _helpTextBox.Text = helpContent;
+            _helpTextBox.Text = FormatHelpText(helpContent);
             this.Controls.Add(_helpTextBox);
+
+            // Set app icon
+            try
+            {
+                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "icon", "app256.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch { /* Ignore icon loading errors */ }
 
             // Separator line
             Panel separator = new Panel
@@ -160,44 +171,50 @@ namespace PDFsManager.UI
             }
         }
 
+        private string FormatHelpText(string markdownText)
+        {
+            // Convert markdown formatting to plain text for better display
+            return markdownText
+                .Replace("\\n\\n", Environment.NewLine + Environment.NewLine)
+                .Replace("\\n", Environment.NewLine)
+                .Replace("### ", "")
+                .Replace("## ", "")
+                .Replace("**", "")
+                .Replace("- ", "• ");
+        }
+
         private string GetFallbackHelpContent()
         {
-            return @"PDFs Manager - Help & Documentation
-
-WHAT DOES THIS TOOL DO?
-PDFs Manager automatically organizes your PDF files by their creation date. It monitors a workspace folder and moves files into organized year/month folders with clean, standardized names.
-
-HOW TO USE:
-1. Set Workspace: Click 'Browse' to select a folder containing your PDF files
-2. Start Monitoring: Click 'Start' to begin automatic file processing
-3. Auto Startup: Check the box to launch automatically with Windows
-
-FILE PROCESSING:
-• Files are renamed to: YYYY-MM-DD_HH-mm-ss.pdf
-• Organized into: Workspace/YYYY/MM/
-• Example: invoice.pdf → 2026-01-15_16-30-05.pdf in 2026/01/
-
-FEATURES:
-✓ Real-time monitoring with FileSystemWatcher
-✓ Automatic folder creation
-✓ Duplicate file handling (_001, _002, etc.)
-✓ File lock retry mechanism
-✓ Comprehensive error logging
-
-TROUBLESHOOTING:
-• File not processed? Check if it has valid PDF metadata
-• Workspace invalid? Ensure the folder exists and you have permissions
-• Files locked? Wait for downloads to complete
-
-REQUIREMENTS:
-• Windows 10/11
-• .NET 8.0 Runtime
-• Read/Write permissions for workspace
-
-CONTACT & SUPPORT:
-For bugs, suggestions, or questions:
-• GitHub: github.com/1172005thinh/PDFsManager
-• Facebook: facebook.com/quickcomp.hungthinhnguyen";
+            return "PDFs Manager - Help & Documentation\r\n\r\n" +
+                   "What does this tool do?\r\n" +
+                   "PDFs Manager automatically organizes your PDF files by their creation date. " +
+                   "It monitors a workspace folder and moves files into organized year/month folders with clean, standardized names.\r\n\r\n" +
+                   "How to use:\r\n" +
+                   "1. Set Workspace: Click 'Browse' to select a folder containing your PDF files\r\n" +
+                   "2. Start Monitoring: Click 'Start' to begin automatic file processing\r\n" +
+                   "3. Auto Startup: Check the box to launch automatically with Windows\r\n\r\n" +
+                   "File Processing:\r\n" +
+                   "• Files are renamed to: YYYY-MM-DD_HH-mm-ss.pdf\r\n" +
+                   "• Organized into: Workspace/YYYY/MM/\r\n" +
+                   "• Example: invoice.pdf -> 2026-01-15_16-30-05.pdf in 2026/01/\r\n\r\n" +
+                   "Features:\r\n" +
+                   "✓ Real-time monitoring with FileSystemWatcher\r\n" +
+                   "✓ Automatic folder creation\r\n" +
+                   "✓ Duplicate file handling (_001, _002, etc.)\r\n" +
+                   "✓ File lock retry mechanism\r\n" +
+                   "✓ Comprehensive error logging\r\n\r\n" +
+                   "Troubleshooting:\r\n" +
+                   "• File not processed? Check if it has valid PDF metadata\r\n" +
+                   "• Workspace invalid? Ensure the folder exists and you have permissions\r\n" +
+                   "• Files locked? Wait for downloads to complete\r\n\r\n" +
+                   "Requirements:\r\n" +
+                   "• Windows 10/11\r\n" +
+                   "• .NET 8.0 Runtime\r\n" +
+                   "• Read/Write permissions for workspace\r\n\r\n" +
+                   "Contact & Support:\r\n" +
+                   "For bugs, suggestions, or questions:\r\n" +
+                   "• GitHub: github.com/1172005thinh/PDFsManager\r\n" +
+                   "• Facebook: facebook.com/quickcomp.hungthinhnguyen";
         }
     }
 }

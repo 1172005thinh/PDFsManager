@@ -34,6 +34,9 @@ namespace PDFsManager.UI
         private Button _exitButton = null!;
         private Button _cancelButton = null!;
         private Label _statusLabel = null!;
+        private NotifyIcon _notifyIcon = null!;
+        private ToolStripMenuItem _trayStartItem = null!;
+        private ToolStripMenuItem _trayStopItem = null!;
 
         public MainForm(Logger logger, ConfigManager configManager, FileProcessor fileProcessor, 
                        FileMonitor fileMonitor, AppConfig config, AppState initialState)
@@ -67,6 +70,20 @@ namespace PDFsManager.UI
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = ThemeHelper.GetColor("Colors.Background", ThemeHelper.Fallback.Background);
+
+            // Set app icon
+            try
+            {
+                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "icon", "app256.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch { /* Ignore icon loading errors */ }
+
+            // Setup system tray icon for background operation
+            SetupSystemTray();
 
             // Log section
             Label logLabel = new Label
@@ -288,6 +305,10 @@ namespace PDFsManager.UI
 
             _statusLabel.Text = statusText;
             _statusLabel.ForeColor = statusColor;
+            _browseButton.Enabled = (_currentState != AppState.RUNNING);
+
+            // Update tray menu items
+            UpdateTrayMenu();
         }
 
         private void AppendLogToGui(string logEntry)
@@ -458,12 +479,152 @@ namespace PDFsManager.UI
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // If monitoring is running, minimize to tray instead of closing
+            if (_currentState == AppState.RUNNING && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.Hide();
+                _notifyIcon.Visible = true;
+                _notifyIcon.ShowBalloonTip(2000, "PDFs Manager", 
+                    "Application minimized to system tray. Monitoring continues in background.", 
+                    ToolTipIcon.Info);
+                return;
+            }
+
             if (_currentState == AppState.RUNNING)
             {
                 _fileMonitor.Stop();
             }
+            
+            _notifyIcon?.Dispose();
             _fileMonitor.Dispose();
             base.OnFormClosing(e);
+        }
+
+        private void SetupSystemTray()
+        {
+            _notifyIcon = new NotifyIcon();
+            
+            // Set tray icon
+            try
+            {
+                string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "icon", "app256.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    _notifyIcon.Icon = new Icon(iconPath);
+                }
+            }
+            catch { /* Use default icon */ }
+
+            _notifyIcon.Text = "PDFs Manager";
+            _notifyIcon.Visible = false;
+
+            // Double-click to restore window
+            _notifyIcon.DoubleClick += (s, e) =>
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+                this.BringToFront();
+                _notifyIcon.Visible = false;
+            };
+
+            // Context menu for tray icon
+            ContextMenuStrip trayMenu = new ContextMenuStrip();
+            
+            ToolStripMenuItem showItem = new ToolStripMenuItem("Show Window");
+            showItem.Click += (s, e) =>
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+                this.BringToFront();
+                _notifyIcon.Visible = false;
+            };
+            trayMenu.Items.Add(showItem);
+
+            _trayStartItem = new ToolStripMenuItem("Start Monitoring");
+            _trayStartItem.Click += (s, e) =>
+            {
+                if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspace(_currentConfig.Workspace))
+                {
+                    if (_fileMonitor.Start(_currentConfig.Workspace))
+                    {
+                        _currentState = AppState.RUNNING;
+                        UpdateStatus();
+                        _notifyIcon.ShowBalloonTip(2000, "PDFs Manager", 
+                            "Monitoring started.", ToolTipIcon.Info);
+                    }
+                    else
+                    {
+                        _currentState = AppState.ERROR;
+                        UpdateStatus();
+                        _notifyIcon.ShowBalloonTip(2000, "PDFs Manager", 
+                            "Failed to start monitoring.", ToolTipIcon.Error);
+                    }
+                }
+            };
+            trayMenu.Items.Add(_trayStartItem);
+
+            _trayStopItem = new ToolStripMenuItem("Stop Monitoring");
+            _trayStopItem.Click += (s, e) =>
+            {
+                if (_currentState == AppState.RUNNING)
+                {
+                    _fileMonitor.Stop();
+                    _currentState = AppState.STOPPED;
+                    UpdateStatus();
+                    _notifyIcon.ShowBalloonTip(2000, "PDFs Manager", 
+                        "Monitoring stopped.", ToolTipIcon.Info);
+                }
+            };
+            trayMenu.Items.Add(_trayStopItem);
+
+            trayMenu.Items.Add(new ToolStripSeparator());
+
+            ToolStripMenuItem exitItem = new ToolStripMenuItem("Exit");
+            exitItem.Click += (s, e) =>
+            {
+                _notifyIcon.Visible = false;
+                if (_currentState == AppState.RUNNING)
+                {
+                    _fileMonitor.Stop();
+                }
+                Application.Exit();
+            };
+            trayMenu.Items.Add(exitItem);
+
+            _notifyIcon.ContextMenuStrip = trayMenu;
+            
+            // Initialize tray menu state
+            UpdateTrayMenu();
+        }
+
+        private void UpdateTrayMenu()
+        {
+            if (_trayStartItem == null || _trayStopItem == null)
+                return;
+
+            // Show/enable appropriate menu items based on current state
+            switch (_currentState)
+            {
+                case AppState.IDLE:
+                case AppState.STOPPED:
+                    _trayStartItem.Visible = true;
+                    _trayStartItem.Enabled = _configManager.ValidateWorkspace(_currentConfig.Workspace);
+                    _trayStopItem.Visible = false;
+                    break;
+
+                case AppState.RUNNING:
+                    _trayStartItem.Visible = false;
+                    _trayStopItem.Visible = true;
+                    _trayStopItem.Enabled = true;
+                    break;
+
+                case AppState.ERROR:
+                    _trayStartItem.Visible = true;
+                    _trayStartItem.Enabled = false;
+                    _trayStopItem.Visible = false;
+                    break;
+            }
         }
     }
 }
