@@ -1,0 +1,56 @@
+{
+  "Name": "Light Theme",
+  "Version": "1.0.0",
+  
+  "Colors": {
+    "Background": "#FFFFFF",
+    "Surface": "#F5F5F5",
+    "Primary": "#0078D4",
+    "PrimaryHover": "#106EBE",
+    "Secondary": "#6C757D",
+    "Success": "#28A745",
+    "Danger": "#DC3545",
+    "Warning": "#FFC107",
+    "Info": "#17A2B8",
+    "Text": "#212529",
+    "TextSecondary": "#6C757D",
+    "TextDisabled": "#ADB5BD",
+    "Border": "#DEE2E6",
+    "BorderFocus": "#80BDFF",
+    "LogBackground": "#FAFAFA",
+    "LogText": "#333333",
+    "StatusRunning": "#28A745",
+    "StatusStopped": "#FFC107",
+    "StatusError": "#DC3545",
+    "StatusIdle": "#6C757D"
+  },
+  
+  "Fonts": {
+    "FontFamily": "Segoe UI",
+    "FontFamilyMono": "Consolas",
+    "FontSizeSmall": 9,
+    "FontSizeNormal": 10,
+    "FontSizeLarge": 11,
+    "FontSizeTitle": 12,
+    "FontWeightNormal": 400,
+    "FontWeightBold": 600
+  },
+  
+  "Spacing": {
+    "PaddingSmall": 4,
+    "PaddingNormal": 8,
+    "PaddingLarge": 12,
+    "MarginSmall": 4,
+    "MarginNormal": 8,
+    "MarginLarge": 12
+  },
+  
+  "Controls": {
+    "ButtonHeight": 25,
+    "ButtonWidth": 80,
+    "TextBoxHeight": 23,
+    "CheckBoxHeight": 20,
+    "LabelHeight": 20,
+    "BorderRadius": 3
+  }
+}

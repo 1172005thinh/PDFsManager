@@ -1,0 +1,64 @@
+{
+  "AppName": "PDFs Manager",
+  "AppVersion": "v1.0.0",
+  "AppTitle": "PDFs Manager v1.0.0",
+  
+  "MainWindow": {
+    "LogSection": {
+      "Title": "Log",
+      "RefreshButton": "Refresh",
+      "ClearButton": "Clear"
+    },
+    "ConfigSection": {
+      "WorkspaceLabel": "Workspace",
+      "BrowseButton": "Browse",
+      "AutoStartupCheckbox": "Enable Auto Startup",
+      "AutoStartupTooltip": "Launch PDFs Manager automatically when Windows starts"
+    },
+    "ControlButtons": {
+      "StartButton": "Start",
+      "StopButton": "Stop",
+      "HelpButton": "Help",
+      "ExitButton": "Exit",
+      "CancelButton": "Cancel"
+    },
+    "StatusLabel": {
+      "Idle": "Status: No workspace configured",
+      "Stopped": "Status: Stopped",
+      "Running": "Status: Running",
+      "Error": "Status: Error - Check logs"
+    }
+  },
+  
+  "HelpDialog": {
+    "Title": "PDFs Manager Help",
+    "CloseButton": "Close",
+    "Author": "Author: 1172005thinh (QuickComp.)",
+    "FacebookLink": "Facebook",
+    "GitHubLink": "GitHub",
+    "LicenseLink": "MIT License",
+    "HelpContent": "## PDFs Manager - Help & Documentation\n\n### What does this tool do?\nPDFs Manager automatically organizes your PDF files by their creation date. It monitors a workspace folder and moves files into organized year/month folders with clean, standardized names.\n\n### How to use:\n1. **Set Workspace**: Click 'Browse' to select a folder containing your PDF files\n2. **Start Monitoring**: Click 'Start' to begin automatic file processing\n3. **Auto Startup**: Check the box to launch automatically with Windows\n\n### File Processing:\n- Files are renamed to: YYYY-MM-DD_HH-mm-ss.pdf\n- Organized into: Workspace/YYYY/MM/\n- Example: invoice.pdf → 2026-01-15_16-30-05.pdf in 2026/01/\n\n### Features:\n✓ Real-time monitoring with FileSystemWatcher\n✓ Automatic folder creation\n✓ Duplicate file handling (_001, _002, etc.)\n✓ File lock retry mechanism\n✓ Comprehensive error logging\n\n### Troubleshooting:\n- **File not processed?** Check if it has valid PDF metadata\n- **Workspace invalid?** Ensure the folder exists and you have permissions\n- **Files locked?** Wait for downloads to complete\n\n### Requirements:\n- Windows 10/11\n- .NET 8.0 Runtime\n- Read/Write permissions for workspace\n\n### Contact & Support:\nFor bugs, suggestions, or questions:\n- GitHub: github.com/1172005thinh/PDFsManager\n- Facebook: facebook.com/quickcomp.hungthinhnguyen"
+  },
+  
+  "Messages": {
+    "WorkspaceInvalid": "The selected workspace directory is invalid or does not exist.",
+    "WorkspaceRequired": "Please select a workspace directory before starting.",
+    "ConfigSaveFailed": "Failed to save configuration. Check file permissions.",
+    "ConfirmExit": "Exit without saving changes?",
+    "ConfirmExitTitle": "Unsaved Changes",
+    "MonitorStartFailed": "Failed to start monitoring. Check workspace permissions.",
+    "SelectWorkspaceTitle": "Select Workspace Folder",
+    "NoLogsAvailable": "No logs available yet.",
+    "MonitoringActive": "Monitoring is active. Stop monitoring before changing workspace."
+  },
+  
+  "Tooltips": {
+    "RefreshLog": "Reload log content from file",
+    "ClearLog": "Clear log display (does not delete log file)",
+    "BrowseWorkspace": "Select a folder to monitor for PDF files",
+    "StartStop": "Start or stop file monitoring",
+    "Help": "View help and documentation",
+    "Exit": "Save changes and exit application",
+    "Cancel": "Discard changes and exit application"
+  }
+}

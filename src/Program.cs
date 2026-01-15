@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using PDFsManager.Core;
 using PDFsManager.Models;
 using PDFsManager.Utils;
+using PDFsManager.UI;
 
 namespace PDFsManager
 {
@@ -41,13 +42,25 @@ namespace PDFsManager
                 logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace is valid. Monitoring can be started.");
             }
 
-            // TODO: Launch GUI
-            // For now, just log that we're ready
-            logger.Write(Constants.LOG_ACTION_INFO, "Application initialized successfully. GUI not yet implemented.");
-            logger.Write(Constants.LOG_ACTION_STOP, "PDFsManager stopped.");
+            // Initialize localization and theming
+            LocalizationHelper.Initialize();
+            ThemeHelper.Initialize();
 
-            // Keep console open for testing
-            Console.WriteLine("PDFsManager Core components initialized successfully.");
+            // Initialize Core components
+            FileProcessor fileProcessor = new FileProcessor(logger);
+            FileMonitor fileMonitor = new FileMonitor(logger, fileProcessor);
+
+            // Launch GUI
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            
+            using (MainForm mainForm = new MainForm(logger, configManager, fileProcessor, fileMonitor, config, initialState))
+            {
+                Application.Run(mainForm);
+            }
+
+            // Cleanup on exit
+            logger.Write(Constants.LOG_ACTION_STOP, "PDFsManager stopped.");
             Console.WriteLine($"Log file: {logger.LogFilePath}");
             Console.WriteLine($"Config file: {configManager.ConfigFilePath}");
             Console.WriteLine("\nPress any key to exit...");
