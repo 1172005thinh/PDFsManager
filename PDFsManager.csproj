@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>res\icon\app256.ico</ApplicationIcon>
+    <AssemblyName>PDFsManager</AssemblyName>
+    <RootNamespace>PDFsManager</RootNamespace>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <Authors>1172005thinh(QuickComp.)</Authors>
+    <Company>QuickComp.</Company>
+    <Product>PDFs Manager</Product>
+    <Description>A tool to manage and organize PDF files efficiently based on create date metadata.</Description>
+    <Copyright>Copyright © 2026 QuickComp.</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="itext7" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="res\icon\*.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="res\lang\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="res\theme\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
