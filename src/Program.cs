@@ -17,8 +17,11 @@ namespace PDFsManager
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            // Check if launched at startup
+            bool isAutoStart = args.Length > 0 && args[0] == StartupHelper.StartupArgument;
+
             // Initialize logger
             Logger logger = new Logger();
             logger.Write(Constants.LOG_ACTION_START, "PDFsManager started.");
@@ -56,6 +59,15 @@ namespace PDFsManager
             
             using (MainForm mainForm = new MainForm(logger, configManager, fileProcessor, fileMonitor, config, initialState))
             {
+                // If auto-started, start monitoring and minimize to tray
+                if (isAutoStart && config.AutoStartup && isWorkspaceValid)
+                {
+                    mainForm.Load += (s, e) =>
+                    {
+                        mainForm.AutoStartMonitoring();
+                    };
+                }
+                
                 Application.Run(mainForm);
             }
 

@@ -169,7 +169,7 @@ namespace PDFsManager.UI
                 Location = new Point(10, 265),
                 Size = new Size(300, 20)
             };
-            _autoStartupCheckBox.CheckedChanged += (s, e) => _configDirty = true;
+            _autoStartupCheckBox.CheckedChanged += AutoStartupCheckBox_CheckedChanged;
             this.Controls.Add(_autoStartupCheckBox);
 
             // Separator line
@@ -325,6 +325,36 @@ namespace PDFsManager.UI
         }
 
         // Event Handlers
+        private void AutoStartupCheckBox_CheckedChanged(object? sender, EventArgs e)
+        {
+            _configDirty = true;
+            _currentConfig.AutoStartup = _autoStartupCheckBox.Checked;
+
+            // Update startup shortcut
+            if (_autoStartupCheckBox.Checked)
+            {
+                if (!StartupHelper.CreateStartupShortcut())
+                {
+                    _logger.Write(Constants.LOG_ACTION_WARN, "Failed to create startup shortcut.");
+                }
+                else
+                {
+                    _logger.Write(Constants.LOG_ACTION_CONFIG, "Auto-startup enabled.");
+                }
+            }
+            else
+            {
+                if (!StartupHelper.RemoveStartupShortcut())
+                {
+                    _logger.Write(Constants.LOG_ACTION_WARN, "Failed to remove startup shortcut.");
+                }
+                else
+                {
+                    _logger.Write(Constants.LOG_ACTION_CONFIG, "Auto-startup disabled.");
+                }
+            }
+        }
+
         private void RefreshButton_Click(object? sender, EventArgs e)
         {
             string logs = _logger.ReadLog();
@@ -473,20 +503,18 @@ namespace PDFsManager.UI
                 _configDirty = false;
                 _logger.Write(Constants.LOG_ACTION_CONFIG, "Configuration changes discarded.");
             }
-
-            Application.Exit();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             // If monitoring is running, minimize to tray instead of closing
-            if (_currentState == AppState.RUNNING && e.CloseReason == CloseReason.UserClosing)
+            if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true;
                 this.Hide();
                 _notifyIcon.Visible = true;
                 _notifyIcon.ShowBalloonTip(2000, "PDFs Manager", 
-                    "Application minimized to system tray. Monitoring continues in background.", 
+                    "Application minimized to system tray.", 
                     ToolTipIcon.Info);
                 return;
             }
@@ -624,6 +652,37 @@ namespace PDFsManager.UI
                     _trayStartItem.Enabled = false;
                     _trayStopItem.Visible = false;
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Public method to auto-start monitoring and minimize to tray.
+        /// Called when application is launched at Windows startup.
+        /// </summary>
+        public void AutoStartMonitoring()
+        {
+            if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspace(_currentConfig.Workspace))
+            {
+                if (_fileMonitor.Start(_currentConfig.Workspace))
+                {
+                    _currentState = AppState.RUNNING;
+                    UpdateStatus();
+                    _logger.Write(Constants.LOG_ACTION_START, "Auto-started monitoring at Windows startup.");
+                    
+                    // Minimize to tray
+                    this.WindowState = FormWindowState.Minimized;
+                    this.Hide();
+                    _notifyIcon.Visible = true;
+                    _notifyIcon.ShowBalloonTip(3000, "PDFs Manager", 
+                        "Auto-started and minimized to tray. Monitoring is active.", 
+                        ToolTipIcon.Info);
+                }
+                else
+                {
+                    _currentState = AppState.ERROR;
+                    UpdateStatus();
+                    _logger.Write(Constants.LOG_ACTION_ERROR, "Failed to auto-start monitoring.");
+                }
             }
         }
     }
