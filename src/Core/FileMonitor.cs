@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +15,9 @@ namespace PDFsManager.Core
     {
         private readonly Logger _logger;
         private readonly FileProcessor _fileProcessor;
-        private FileSystemWatcher? _watcher;
+        private List<FileSystemWatcher> _watchers = new List<FileSystemWatcher>();
         private Timer? _periodicScanTimer;
-        private string _workspacePath = string.Empty;
+        private List<string> _workspacePaths = new List<string>();
         private bool _isRunning = false;
         private readonly object _lockObject = new object();
 
@@ -32,11 +33,11 @@ namespace PDFsManager.Core
         }
 
         /// <summary>
-        /// Starts monitoring the specified workspace directory.
+        /// Starts monitoring the specified workspace directories.
         /// </summary>
-        /// <param name="workspacePath">Path to workspace directory to monitor.</param>
+        /// <param name="workspacePaths">List of workspace directory paths to monitor.</param>
         /// <returns>True if started successfully, false otherwise.</returns>
-        public bool Start(string workspacePath)
+        public bool Start(List<string> workspacePaths)
         {
             lock (_lockObject)
             {
@@ -46,30 +47,41 @@ namespace PDFsManager.Core
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(workspacePath) || !Directory.Exists(workspacePath))
+                if (workspacePaths == null || workspacePaths.Count == 0 || workspacePaths.Count > 8)
                 {
-                    _logger.Write(Constants.LOG_ACTION_ERROR, "Invalid workspace path. Cannot start monitoring.");
+                    _logger.Write(Constants.LOG_ACTION_ERROR, "Invalid workspaces. Cannot start monitoring.");
                     return false;
                 }
 
                 try
                 {
-                    _workspacePath = workspacePath;
-                    _fileProcessor.SetWorkspace(workspacePath);
+                    _workspacePaths = workspacePaths;
+                    _fileProcessor.SetWorkspaces(workspacePaths);
 
-                    // Initialize FileSystemWatcher
-                    _watcher = new FileSystemWatcher(_workspacePath)
+                    foreach (var path in workspacePaths)
                     {
-                        Filter = Constants.PDF_FILTER,
-                        NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime,
-                        IncludeSubdirectories = false,
-                        EnableRaisingEvents = true
-                    };
+                        if (!Directory.Exists(path))
+                        {
+                            _logger.Write(Constants.LOG_ACTION_WARN, $"Workspace directory not found: {path}");
+                            continue;
+                        }
 
-                    // Subscribe to events
-                    _watcher.Created += OnFileCreated;
-                    _watcher.Renamed += OnFileRenamed;
-                    _watcher.Error += OnWatcherError;
+                        // Initialize FileSystemWatcher
+                        var watcher = new FileSystemWatcher(path)
+                        {
+                            Filter = Constants.PDF_FILTER,
+                            NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime,
+                            IncludeSubdirectories = false,
+                            EnableRaisingEvents = true
+                        };
+
+                        // Subscribe to events
+                        watcher.Created += OnFileCreated;
+                        watcher.Renamed += OnFileRenamed;
+                        watcher.Error += OnWatcherError;
+                        
+                        _watchers.Add(watcher);
+                    }
 
                     // Start periodic scan timer (every 5 minutes)
                     _periodicScanTimer = new Timer(
@@ -160,22 +172,19 @@ namespace PDFsManager.Core
         {
             Exception? ex = e.GetException();
             _logger.Write(Constants.LOG_ACTION_ERROR, $"FileSystemWatcher error: {ex?.Message ?? "Unknown error"}");
-            
-            // Try to recover by restarting the watcher
-            if (_watcher != null)
+
+            // Try to recover by restarting the watchers
+            foreach (var watcher in _watchers)
             {
                 try
                 {
-                    _watcher.EnableRaisingEvents = false;
+                    watcher.EnableRaisingEvents = false;
                     Thread.Sleep(1000);
-                    _watcher.EnableRaisingEvents = true;
-                    _logger.Write(Constants.LOG_ACTION_INFO, "FileSystemWatcher restarted after error.");
+                    watcher.EnableRaisingEvents = true;
                 }
-                catch
-                {
-                    _logger.Write(Constants.LOG_ACTION_ERROR, "Failed to restart FileSystemWatcher.");
-                }
+                catch { }
             }
+            _logger.Write(Constants.LOG_ACTION_INFO, "FileSystemWatchers restarted after error attempt.");
         }
 
         /// <summary>
@@ -203,15 +212,18 @@ namespace PDFsManager.Core
         /// </summary>
         private void CleanupResources()
         {
-            if (_watcher != null)
+            foreach (var watcher in _watchers)
             {
-                _watcher.EnableRaisingEvents = false;
-                _watcher.Created -= OnFileCreated;
-                _watcher.Renamed -= OnFileRenamed;
-                _watcher.Error -= OnWatcherError;
-                _watcher.Dispose();
-                _watcher = null;
+                if (watcher != null)
+                {
+                    watcher.EnableRaisingEvents = false;
+                    watcher.Created -= OnFileCreated;
+                    watcher.Renamed -= OnFileRenamed;
+                    watcher.Error -= OnWatcherError;
+                    watcher.Dispose();
+                }
             }
+            _watchers.Clear();
 
             if (_periodicScanTimer != null)
             {
@@ -219,7 +231,6 @@ namespace PDFsManager.Core
                 _periodicScanTimer = null;
             }
         }
-
         /// <summary>
         /// Gets whether the monitor is currently running.
         /// </summary>

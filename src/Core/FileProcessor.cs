@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using PDFsManager.Models;
@@ -13,7 +14,7 @@ namespace PDFsManager.Core
     public class FileProcessor
     {
         private readonly Logger _logger;
-        private string _workspacePath = string.Empty;
+        private List<string> _workspacePaths = new List<string>();
 
         /// <summary>
         /// Creates a new FileProcessor instance.
@@ -25,40 +26,46 @@ namespace PDFsManager.Core
         }
 
         /// <summary>
-        /// Sets the workspace path for file processing.
+        /// Sets the workspace paths for file processing.
         /// </summary>
-        public void SetWorkspace(string workspacePath)
+        public void SetWorkspaces(List<string> workspacePaths)
         {
-            _workspacePath = workspacePath;
+            _workspacePaths = workspacePaths ?? new List<string>();
         }
 
         /// <summary>
-        /// Scans the workspace directory and processes all PDF files found.
+        /// Scans the workspace directories and processes all PDF files found.
         /// Non-recursive - ignores subdirectories.
         /// </summary>
         public void ScanAndProcess()
         {
-            if (string.IsNullOrEmpty(_workspacePath) || !Directory.Exists(_workspacePath))
+            if (_workspacePaths == null || _workspacePaths.Count == 0)
             {
-                _logger.Write(Constants.LOG_ACTION_ERROR, "Workspace is not set or invalid.");
+                _logger.Write(Constants.LOG_ACTION_ERROR, "Workspaces are not set.");
                 return;
             }
 
             try
             {
-                // Get all PDF files in workspace (non-recursive)
-                string[] pdfFiles = Directory.GetFiles(_workspacePath, Constants.PDF_FILTER, SearchOption.TopDirectoryOnly);
+                var allPdfFiles = new List<string>();
+                foreach (var workspacePath in _workspacePaths)
+                {
+                    if (Directory.Exists(workspacePath))
+                    {
+                        allPdfFiles.AddRange(Directory.GetFiles(workspacePath, Constants.PDF_FILTER, SearchOption.TopDirectoryOnly));
+                    }
+                }
 
-                if (pdfFiles.Length == 0)
+                if (allPdfFiles.Count == 0)
                 {
                     _logger.Write(Constants.LOG_ACTION_SCAN, "Nothing to process.");
                     return;
                 }
 
-                _logger.Write(Constants.LOG_ACTION_SCAN, $"Found {pdfFiles.Length} file(s) to process.");
+                _logger.Write(Constants.LOG_ACTION_SCAN, $"Found {allPdfFiles.Count} file(s) to process.");
                 _logger.WriteSeparator(major: true);
 
-                foreach (string filePath in pdfFiles)
+                foreach (string filePath in allPdfFiles)
                 {
                     ProcessFile(filePath);
                     _logger.WriteSeparator(major: false);
@@ -116,7 +123,8 @@ namespace PDFsManager.Core
                 // Step 4: Determine target folder (workspace/YYYY/MM/)
                 string yearFolder = creationDate.ToString(Constants.FOLDER_YEAR_FORMAT);
                 string monthFolder = creationDate.ToString(Constants.FOLDER_MONTH_FORMAT);
-                string targetFolder = Path.Combine(_workspacePath, yearFolder, monthFolder);
+                string parentDir = Path.GetDirectoryName(filePath) ?? string.Empty;
+                string targetFolder = Path.Combine(parentDir, yearFolder, monthFolder);
 
                 // Step 5: Ensure target folder exists
                 if (!Directory.Exists(targetFolder))

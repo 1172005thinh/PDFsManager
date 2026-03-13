@@ -42,20 +42,19 @@ namespace PDFsManager
             AppConfig config = configManager.Load();
 
             // Validate workspace
-            bool isWorkspaceValid = configManager.ValidateWorkspace(config.Workspace);
+            bool isWorkspaceValid = configManager.ValidateWorkspaces(config.Workspaces);
             AppState initialState = isWorkspaceValid ? AppState.STOPPED : AppState.IDLE;
 
-            logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspace set to '{config.Workspace}'");
-            
+            logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspaces set to '{string.Join(", ", config.Workspaces)}'");
+
             if (initialState == AppState.IDLE)
             {
-                logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace is empty or invalid.");
+                logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspaces are empty or invalid.");
             }
             else
             {
-                logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace is valid. Monitoring can be started.");
+                logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspaces are valid. Monitoring can be started.");
             }
-
             // Initialize localization and theming
             LocalizationHelper.Initialize();
             ThemeHelper.Initialize();

@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Newtonsoft.Json;
+
 namespace PDFsManager.Models
 {
     /// <summary>
@@ -7,9 +10,21 @@ namespace PDFsManager.Models
     public class AppConfig
     {
         /// <summary>
-        /// Workspace directory path where PDF files are monitored and processed.
+        /// Workspace directories path where PDF files are monitored and processed.
         /// </summary>
-        public string Workspace { get; set; } = string.Empty;
+        public List<string> Workspaces { get; set; } = new List<string>();
+
+        [JsonProperty("Workspace")]
+        private string LegacyWorkspace
+        {
+            set
+            {
+                if (!string.IsNullOrEmpty(value) && !Workspaces.Contains(value))
+                {
+                    Workspaces.Add(value);
+                }
+            }
+        }
 
         /// <summary>
         /// Whether the application should start automatically when Windows starts.
@@ -26,9 +41,9 @@ namespace PDFsManager.Models
         /// <summary>
         /// Creates a configuration with specified values.
         /// </summary>
-        public AppConfig(string workspace, bool autoStartup)
+        public AppConfig(List<string> workspaces, bool autoStartup)
         {
-            Workspace = workspace;
+            Workspaces = workspaces ?? new List<string>();
             AutoStartup = autoStartup;
         }
     }

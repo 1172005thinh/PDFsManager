@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using PDFsManager.Models;
@@ -93,25 +94,40 @@ namespace PDFsManager.Core
         }
 
         /// <summary>
-        /// Validates that a workspace directory path is valid.
+        /// Validates that workspace directory paths are valid and within limit.
         /// </summary>
-        /// <param name="path">Directory path to validate.</param>
+        /// <param name="paths">List of directory paths to validate.</param>
         /// <returns>True if valid, false otherwise.</returns>
-        public bool ValidateWorkspace(string path)
+        public bool ValidateWorkspaces(List<string> paths)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (paths == null || paths.Count == 0)
             {
-                _logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace path is empty.");
+                _logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace list is empty.");
                 return false;
             }
 
-            if (!Directory.Exists(path))
+            if (paths.Count > 8)
             {
-                _logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspace directory does not exist: '{path}'");
+                _logger.Write(Constants.LOG_ACTION_WORKSPACE, "Workspace list exceeds maximum allowed (8).");
                 return false;
             }
 
-            _logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspace is valid: '{path}'");
+            foreach (var path in paths)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    _logger.Write(Constants.LOG_ACTION_WORKSPACE, "A workspace path is empty.");
+                    return false;
+                }
+
+                if (!Directory.Exists(path))
+                {
+                    _logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspace directory does not exist: '{path}'");
+                    return false;
+                }
+            }
+
+            _logger.Write(Constants.LOG_ACTION_WORKSPACE, $"Workspaces are valid. Count: {paths.Count}");
             return true;
         }
 

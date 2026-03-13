@@ -26,8 +26,9 @@ namespace PDFsManager.UI
         private TextBox _logTextBox = null!;
         private Button _refreshButton = null!;
         private Button _clearButton = null!;
-        private TextBox _workspaceTextBox = null!;
-        private Button _browseButton = null!;
+        private ListBox _workspacesListBox = null!;
+        private Button _addButton = null!;
+        private Button _removeButton = null!;
         private CheckBox _autoStartupCheckBox = null!;
         private Button _startStopButton = null!;
         private Button _helpButton = null!;
@@ -145,23 +146,31 @@ namespace PDFsManager.UI
             };
             this.Controls.Add(workspaceLabel);
 
-            _workspaceTextBox = new TextBox
+            _workspacesListBox = new ListBox
             {
                 Location = new Point(85, 233),
-                Size = new Size(400, 23),
-                ReadOnly = true
+                Size = new Size(400, 30),
+                SelectionMode = SelectionMode.One
             };
-            _workspaceTextBox.TextChanged += (s, e) => _configDirty = true;
-            this.Controls.Add(_workspaceTextBox);
+            this.Controls.Add(_workspacesListBox);
 
-            _browseButton = new Button
+            _addButton = new Button
             {
-                Text = LocalizationHelper.Get("MainWindow.ConfigSection.BrowseButton", LocalizationHelper.Fallback.Browse),
+                Text = "+",
                 Location = new Point(490, 232),
-                Size = new Size(80, 25)
+                Size = new Size(35, 25)
             };
-            _browseButton.Click += BrowseButton_Click;
-            this.Controls.Add(_browseButton);
+            _addButton.Click += AddButton_Click;
+            this.Controls.Add(_addButton);
+
+            _removeButton = new Button
+            {
+                Text = "-",
+                Location = new Point(530, 232),
+                Size = new Size(35, 25)
+            };
+            _removeButton.Click += RemoveButton_Click;
+            this.Controls.Add(_removeButton);
 
             _autoStartupCheckBox = new CheckBox
             {
@@ -249,7 +258,14 @@ namespace PDFsManager.UI
 
         private void LoadConfiguration()
         {
-            _workspaceTextBox.Text = _currentConfig.Workspace;
+            _workspacesListBox.Items.Clear();
+            if (_currentConfig.Workspaces != null)
+            {
+                foreach(var ws in _currentConfig.Workspaces)
+                {
+                    _workspacesListBox.Items.Add(ws);
+                }
+            }
             _autoStartupCheckBox.Checked = _currentConfig.AutoStartup;
             _configDirty = false;
 
@@ -274,7 +290,7 @@ namespace PDFsManager.UI
                     statusText = LocalizationHelper.Get("MainWindow.StatusLabel.Idle", LocalizationHelper.Fallback.StatusIdle);
                     statusColor = ThemeHelper.GetColor("Colors.StatusIdle", ThemeHelper.Fallback.StatusIdle);
                     _startStopButton.Text = LocalizationHelper.Get("MainWindow.ControlButtons.StartButton", LocalizationHelper.Fallback.Start);
-                    _startStopButton.Enabled = !string.IsNullOrEmpty(_currentConfig.Workspace);
+                    _startStopButton.Enabled = _currentConfig.Workspaces != null && _currentConfig.Workspaces.Count > 0;
                     break;
 
                 case AppState.STOPPED:
@@ -305,7 +321,8 @@ namespace PDFsManager.UI
 
             _statusLabel.Text = statusText;
             _statusLabel.ForeColor = statusColor;
-            _browseButton.Enabled = (_currentState != AppState.RUNNING);
+            _addButton.Enabled = (_currentState != AppState.RUNNING);
+            _removeButton.Enabled = (_currentState != AppState.RUNNING);
 
             // Update tray menu items
             UpdateTrayMenu();
@@ -368,17 +385,23 @@ namespace PDFsManager.UI
             _logTextBox.Clear();
         }
 
-        private void BrowseButton_Click(object? sender, EventArgs e)
+        private void AddButton_Click(object? sender, EventArgs e)
         {
+            if (_currentConfig.Workspaces.Count >= 8)
+            {
+                MessageBox.Show("Maximum 8 workspaces allowed.", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             using (FolderBrowserDialog dialog = new FolderBrowserDialog())
             {
                 dialog.Description = LocalizationHelper.Get("Messages.SelectWorkspaceTitle", "Select Workspace Folder");
-                dialog.SelectedPath = string.IsNullOrEmpty(_currentConfig.Workspace) 
-                    ? Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-                    : _currentConfig.Workspace;
-
+                
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
+                    if (_currentConfig.Workspaces.Contains(dialog.SelectedPath))
+                        return;
+
                     if (_currentState == AppState.RUNNING)
                     {
                         _fileMonitor.Stop();
@@ -386,10 +409,29 @@ namespace PDFsManager.UI
                         UpdateStatus();
                     }
 
-                    _workspaceTextBox.Text = dialog.SelectedPath;
-                    _currentConfig.Workspace = dialog.SelectedPath;
+                    _currentConfig.Workspaces.Add(dialog.SelectedPath);
+                    _workspacesListBox.Items.Add(dialog.SelectedPath);
                     _configDirty = true;
+                    UpdateStatus();
                 }
+            }
+        }
+
+        private void RemoveButton_Click(object? sender, EventArgs e)
+        {
+            if (_workspacesListBox.SelectedItem is string selectedPath)
+            {
+                if (_currentState == AppState.RUNNING)
+                {
+                    _fileMonitor.Stop();
+                    _currentState = AppState.STOPPED;
+                    UpdateStatus();
+                }
+
+                _currentConfig.Workspaces.Remove(selectedPath);
+                _workspacesListBox.Items.Remove(selectedPath);
+                _configDirty = true;
+                UpdateStatus();
             }
         }
 
@@ -407,7 +449,7 @@ namespace PDFsManager.UI
                 // Start monitoring
                 if (_configDirty)
                 {
-                    if (!_configManager.ValidateWorkspace(_currentConfig.Workspace))
+                    if (!_configManager.ValidateWorkspaces(_currentConfig.Workspaces))
                     {
                         MessageBox.Show(
                             LocalizationHelper.Get("Messages.WorkspaceInvalid", "Invalid workspace directory."),
@@ -432,7 +474,7 @@ namespace PDFsManager.UI
                     _configDirty = false;
                 }
 
-                if (_fileMonitor.Start(_currentConfig.Workspace))
+                if (_fileMonitor.Start(_currentConfig.Workspaces))
                 {
                     _currentState = AppState.RUNNING;
                     UpdateStatus();
@@ -471,7 +513,7 @@ namespace PDFsManager.UI
 
             if (_configDirty)
             {
-                if (_configManager.ValidateWorkspace(_currentConfig.Workspace))
+                if (_configManager.ValidateWorkspaces(_currentConfig.Workspaces))
                 {
                     _configManager.Save(_currentConfig);
                 }
@@ -498,7 +540,14 @@ namespace PDFsManager.UI
             if (_configDirty)
             {
                 _currentConfig = _configManager.Load();
-                _workspaceTextBox.Text = _currentConfig.Workspace;
+                _workspacesListBox.Items.Clear();
+                if (_currentConfig.Workspaces != null)
+                {
+                    foreach(var ws in _currentConfig.Workspaces)
+                    {
+                        _workspacesListBox.Items.Add(ws);
+                    }
+                }
                 _autoStartupCheckBox.Checked = _currentConfig.AutoStartup;
                 _configDirty = false;
                 _logger.Write(Constants.LOG_ACTION_CONFIG, "Configuration changes discarded.");
@@ -584,9 +633,9 @@ namespace PDFsManager.UI
             _trayStartItem = new ToolStripMenuItem("Start Monitoring");
             _trayStartItem.Click += (s, e) =>
             {
-                if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspace(_currentConfig.Workspace))
+                if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspaces(_currentConfig.Workspaces))
                 {
-                    if (_fileMonitor.Start(_currentConfig.Workspace))
+                    if (_fileMonitor.Start(_currentConfig.Workspaces))
                     {
                         _currentState = AppState.RUNNING;
                         UpdateStatus();
@@ -649,7 +698,7 @@ namespace PDFsManager.UI
                 case AppState.IDLE:
                 case AppState.STOPPED:
                     _trayStartItem.Visible = true;
-                    _trayStartItem.Enabled = _configManager.ValidateWorkspace(_currentConfig.Workspace);
+                    _trayStartItem.Enabled = _configManager.ValidateWorkspaces(_currentConfig.Workspaces);
                     _trayStopItem.Visible = false;
                     break;
 
@@ -673,9 +722,9 @@ namespace PDFsManager.UI
         /// </summary>
         public void AutoStartMonitoring()
         {
-            if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspace(_currentConfig.Workspace))
+            if (_currentState != AppState.RUNNING && _configManager.ValidateWorkspaces(_currentConfig.Workspaces))
             {
-                if (_fileMonitor.Start(_currentConfig.Workspace))
+                if (_fileMonitor.Start(_currentConfig.Workspaces))
                 {
                     _currentState = AppState.RUNNING;
                     UpdateStatus();
