@@ -8,7 +8,7 @@
     <AssemblyName>PDFsManager</AssemblyName>
     <RootNamespace>PDFsManager</RootNamespace>
     <Nullable>enable</Nullable>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>1172005thinh(QuickComp.)</Authors>
     <Company>QuickComp.</Company>
     <Product>PDFs Manager</Product>
